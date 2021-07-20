@@ -178,49 +178,56 @@ namespace SharpFont
             //RevertNormal();
             GenFaces(mesh);
             int FaceCount = faces.Count;
-            for (int i = 0; i < FaceCount; i++) {
-                Extrude(i, new System.Numerics.Vector3(0, 0, .5f));
+            for(int i = 0; i < FaceCount; i++)
+            {
+                Extrude(i, new System.Numerics.Vector3(0,0,.5f));
             }
             GenTrianguatedObj();
         }
-        public void Extrude(int faceIndex, System.Numerics.Vector3 dir) {
+        public void Extrude(int faceIndex, System.Numerics.Vector3 dir)
+        {
             int EdgeCount = EdgeCheck(loopEdges[faces[faceIndex].loopEdges[0]].vertexIndex[0]);
             List<LoopEdge> newFaceLoops = new List<LoopEdge>();
-            for (int i = 0; i < faces[faceIndex].loopEdges.Length; i++) {
+            for (int i = 0; i < faces[faceIndex].loopEdges.Length; i++)
+            {
                 LoopEdge srcLoop = loopEdges[faces[faceIndex].loopEdges[i]];
                 LoopEdge newLoop = new LoopEdge();
                 newLoop.vertexIndex = new int[srcLoop.vertexIndex.Length];
                 newLoop.isHole = srcLoop.isHole;
                 //挤压后新表面的所有顶点
-                for (int j = 0; j < srcLoop.vertexIndex.Length; j++) {
+                for (int j=0;j< srcLoop.vertexIndex.Length; j++)
+                {
                     newLoop.vertexIndex[j] = vertices.Count;
-                    vertices.Add(new Vertex() { x = vertices[srcLoop.vertexIndex[j]].x + dir.X, y = vertices[srcLoop.vertexIndex[j]].y + dir.Y, z = dir.Z });
+                    vertices.Add(new Vertex() { x = vertices[srcLoop.vertexIndex[j]].x+ dir.X, y = vertices[srcLoop.vertexIndex[j]].y+ dir.Y, z = dir.Z });
                 }
                 //连接原表面与新表面间的侧面
                 Bridge(srcLoop, newLoop);
                 //记录新表面的所有Loop
                 newFaceLoops.Add(newLoop);
             }
-            if (EdgeCount < 0) {
+            if (EdgeCount<0)
+            {
                 //连接着其他面，所以原表面替换为新表面，挤压
-                for (int i = 0; i < faces[faceIndex].loopEdges.Length; i++) {
+                for(int i = 0; i < faces[faceIndex].loopEdges.Length; i++)
+                {
                     //if(loopEdges[faces[faceIndex].loopEdges[i]].isHole)
-                    //   loopEdges.RemoveAt(faces[faceIndex].loopEdges[i]);
+                     //   loopEdges.RemoveAt(faces[faceIndex].loopEdges[i]);
                 }
                 faces.RemoveAt(faceIndex);
 
                 Face newFace = new Face();
                 newFace.loopEdges = new int[newFaceLoops.Count];
-                for (int i = 0; i < newFaceLoops.Count; i++) {
+                for(int i=0;i < newFaceLoops.Count; i++)
+                {
                     loopEdges.Add(newFaceLoops[i]);
                     newFace.loopEdges[i] = loopEdges.Count - 1;
                 }
                 faces.Add(newFace);
                 CalNormal(newFace);
             }
-            else {
+            else
+            {
                 //孤立面，需要挤压，原位置生成新面，原loop反向法线
-                //UnityEngine.Debug.Log("Before;" + faceIndex + "," + faces[faceIndex].Normal);
                 int length = loopEdges[faces[faceIndex].loopEdges[0]].vertexIndex.Length;
                 for (int j = 0; j < length / 2; j++)
                 {
@@ -230,11 +237,10 @@ namespace SharpFont
                     //UnityEngine.Debug.Log("Exchange;" + j + "," + (length - 1 - j));
                 }
                 CalNormal(faces[faceIndex]);
-                //UnityEngine.Debug.Log("After;"+faceIndex + "," + faces[faceIndex].Normal);
-
                 Face newFace = new Face();
                 newFace.loopEdges = new int[newFaceLoops.Count];
-                for (int i = 0; i < newFaceLoops.Count; i++) {
+                for (int i = 0; i < newFaceLoops.Count; i++)
+                {
                     loopEdges.Add(newFaceLoops[i]);
                     newFace.loopEdges[i] = loopEdges.Count - 1;
                 }
@@ -242,11 +248,12 @@ namespace SharpFont
                 CalNormal(newFace);
             }
         }
-
-        public void Bridge(LoopEdge loop1, LoopEdge loop2) {
-            for (int i = 0; i < loop1.vertexIndex.Length; i++) {
+        public void Bridge(LoopEdge loop1,LoopEdge loop2)
+        {
+            for(int i = 0; i < loop1.vertexIndex.Length; i++)
+            {
                 LoopEdge newLoop = new LoopEdge();
-                newLoop.vertexIndex = new int[4] { loop1.vertexIndex[(i + 1) % loop1.vertexIndex.Length], loop1.vertexIndex[i] ,loop2.vertexIndex[i], loop2.vertexIndex[(i + 1) % loop2.vertexIndex.Length], };
+                newLoop.vertexIndex = new int[4] { loop2.vertexIndex[i], loop2.vertexIndex[(i + 1) % loop2.vertexIndex.Length], loop1.vertexIndex[(i + 1) % loop1.vertexIndex.Length], loop1.vertexIndex[i] };
                 newLoop.isHole = false;
                 loopEdges.Add(newLoop);
                 Face newFace = new Face();
@@ -255,30 +262,17 @@ namespace SharpFont
                 CalNormal(newFace);
             }
         }
-        public int EdgeCheck(int vertexIndex) {
+        public int EdgeCheck(int vertexIndex)
+        {
             int Count = 0;
-            for (int i = 0; i < loopEdges.Count; i++) {
-                if (Array.BinarySearch(loopEdges[i].vertexIndex, vertexIndex) > 0) {
+            for(int i = 0; i < loopEdges.Count; i++)
+            {
+                if (Array.BinarySearch(loopEdges[i].vertexIndex, vertexIndex) > 0)
+                {
                     Count++;
                 }
             }
             return Count;
-        }
-        public Vertex CalNormal(Face face) {
-            Vertex Normal = new Vertex();
-            int[] vert = loopEdges[face.loopEdges[0]].vertexIndex;
-            for(int i = 0; i < vert.Length; i++)
-            {
-                int m = (i + 1) % vert.Length;
-                int n = (i + 2) % vert.Length;
-                Vertex v1 = new Vertex() { x = vertices[vert[i]].x - vertices[vert[m]].x, y = vertices[vert[i]].y - vertices[vert[m]].y, z = vertices[vert[i]].z - vertices[vert[m]].z };
-                Vertex v2 = new Vertex() { x = vertices[vert[m]].x - vertices[vert[n]].x, y = vertices[vert[m]].y - vertices[vert[n]].y, z = vertices[vert[m]].z - vertices[vert[n]].z };
-                Normal.x += v1.y * v2.z - v2.y * v1.z;
-                Normal.y += v1.x * v2.z - v2.x * v1.z;
-                Normal.z += v1.x * v2.y - v2.x * v1.y;
-            }
-            face.Normal = new Vertex() { x = Normal.x / vert.Length, y = Normal.y / vert.Length, z = Normal.z / vert.Length };
-            return face.Normal;
         }
         public void GenTrianguatedObj()
         {
@@ -304,28 +298,32 @@ namespace SharpFont
                     }
                     for (int k = 0; k < loopEdges[faces[i].loopEdges[j]].vertexIndex.Length; k++)
                     {
-                        if (faces[i].Normal.z != 0) {
-                            if (Faces[i].Normal.z > 0)
+                        if (faces[i].Normal.z !=0)
+                        {
+                            if (faces[i].Normal.z > 0)
                                 needReverse = true;
                             earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].x);
                             earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].y);
-                        }
-                        else if (faces[i].Normal.y != 0) {
-                            if (Faces[i].Normal.y < 0)
+                            earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].z);
+                        }else if (faces[i].Normal.y!=0)
+                        {
+                            if (faces[i].Normal.y < 0)
                                 needReverse = true;
                             earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].x);
                             earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].z);
-                        }
-                        else {
-                            if (Faces[i].Normal.x < 0)
+                            earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].y);
+                        }else
+                        {
+                            if (faces[i].Normal.x < 0)
                                 needReverse = true;
                             earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].y);
                             earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].z);
+                            earCutData.Add(vertices[loopEdges[faces[i].loopEdges[j]].vertexIndex[k]].x);
                         }
                         earVertexMap.Add(loopEdges[faces[i].loopEdges[j]].vertexIndex[k]);
                     }
                 }
-                List<int> earCutResult = EarcutNet.Earcut.Tessellate(earCutData, holeIndices);
+                List<int> earCutResult = EarcutNet.Earcut.Tessellate(earCutData, holeIndices,3);
                 if (needReverse)
                     earCutResult.Reverse();
                 for (int j = 0; j < earCutResult.Count; j += 3)
@@ -344,6 +342,23 @@ namespace SharpFont
             streamWriter.Flush();
             streamWriter.Close();
             fileStream.Close();
+        }
+        public Vertex CalNormal(Face face)
+        {
+            Vertex Normal = new Vertex();
+            int[] vert = loopEdges[face.loopEdges[0]].vertexIndex;
+            for(int i = 0; i < vert.Length; i++)
+            {
+                int m = (i + 1) % vert.Length;
+                int n = (i + 2) % vert.Length;
+                Vertex v1 = new Vertex() { x = vertices[vert[i]].x - vertices[vert[m]].x, y = vertices[vert[i]].y - vertices[vert[m]].y, z = vertices[vert[i]].z - vertices[vert[m]].z };
+                Vertex v2 = new Vertex() { x = vertices[vert[m]].x - vertices[vert[n]].x, y = vertices[vert[m]].y - vertices[vert[n]].y, z = vertices[vert[m]].z - vertices[vert[n]].z };
+                Normal.x += v1.y * v2.z - v2.y * v1.z;
+                Normal.y += v1.x * v2.z - v2.x * v1.z;
+                Normal.z += v1.x * v2.y - v2.x * v1.y;
+            }
+            face.Normal = new Vertex() { x = Normal.x / vert.Length, y = Normal.y / vert.Length, z = Normal.z / vert.Length };
+            return face.Normal;
         }
         public void GenTrianguatedObj(Mesh mesh)
         {
@@ -412,7 +427,7 @@ namespace SharpFont
                         streamWriter.WriteLine();
                     }
                     //最后一个，或者下一个Loop不为孔时，三角化当前多边形
-                    List<int> earCutResult = EarcutNet.Earcut.Tessellate(earCutData, holeIndices);
+                    List<int> earCutResult = EarcutNet.Earcut.Tessellate(earCutData, holeIndices,3);
                     for (int j = 0; j < earCutResult.Count; j += 3)
                     {
                         streamWriter.Write("f ");
