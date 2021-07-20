@@ -267,13 +267,18 @@ namespace SharpFont
         public Vertex CalNormal(Face face) {
             Vertex Normal = new Vertex();
             int[] vert = loopEdges[face.loopEdges[0]].vertexIndex;
-            Vertex v1 = new Vertex() { x = vertices[vert[0]].x - vertices[vert[1]].x, y = vertices[vert[0]].y - vertices[vert[1]].y, z = vertices[vert[0]].z - vertices[vert[1]].z };
-            Vertex v2 = new Vertex() { x = vertices[vert[1]].x - vertices[vert[2]].x, y = vertices[vert[1]].y - vertices[vert[2]].y, z = vertices[vert[1]].z - vertices[vert[2]].z };
-            Normal.x = v1.y * v2.z - v2.y * v1.z;
-            Normal.y = v1.x * v2.z - v2.x * v1.z;
-            Normal.z = v1.x * v2.y - v2.x * v1.y;
-            face.Normal = Normal;
-            return Normal;
+            for(int i = 0; i < vert.Length; i++)
+            {
+                int m = (i + 1) % vert.Length;
+                int n = (i + 2) % vert.Length;
+                Vertex v1 = new Vertex() { x = vertices[vert[i]].x - vertices[vert[m]].x, y = vertices[vert[i]].y - vertices[vert[m]].y, z = vertices[vert[i]].z - vertices[vert[m]].z };
+                Vertex v2 = new Vertex() { x = vertices[vert[m]].x - vertices[vert[n]].x, y = vertices[vert[m]].y - vertices[vert[n]].y, z = vertices[vert[m]].z - vertices[vert[n]].z };
+                Normal.x += v1.y * v2.z - v2.y * v1.z;
+                Normal.y += v1.x * v2.z - v2.x * v1.z;
+                Normal.z += v1.x * v2.y - v2.x * v1.y;
+            }
+            face.Normal = new Vertex() { x = Normal.x / vert.Length, y = Normal.y / vert.Length, z = Normal.z / vert.Length };
+            return face.Normal;
         }
         public void GenTrianguatedObj()
         {
