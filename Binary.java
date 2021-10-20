@@ -1,3 +1,4 @@
+//https://juejin.cn/post/6844903956238303240
 /**
 *@global {Uint8Array} arr - 即字节流如[0xff,0xaa,0x10...]
 *@global {Number} pos - 二进制流索引，比如0的时候为这个buffer的二进制第0位
