@@ -1,0 +1,299 @@
+package com.nmaid.asset.loader;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+public class MMDLoader {
+
+	/**
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		// TODO Auto-generated method stub
+		String path="";
+		//FileReader fr=new FileReader(path);
+		//BufferedReader br=new BufferedReader(fr);
+		File file=new File(path);
+		InputStream is=new FileInputStream(file);
+		DataInputStream dis=new DataInputStream(is);
+		LittleEndianReader leR=new LittleEndianReader(dis);
+		for(int i=0;i<4;i++){
+			System.out.print((char)leR.readByte());
+		}
+		System.out.print(leR.readFloat32());
+		System.out.println();
+		
+		System.out.println("HeaderSize:"+leR.readUint8());
+		System.out.println("Encoding:"+leR.readUint8());
+		int additionalUvNum=leR.readUint8();
+		System.out.println("additionalUvNum:"+additionalUvNum);
+		System.out.println("vertexIndexSize:"+leR.readUint8());
+		System.out.println("textureIndexSize:"+leR.readUint8());
+		System.out.println("materialIndexSize:"+leR.readUint8());
+		int boneIndexSize=leR.readUint8();
+		System.out.println("boneIndexSize:"+boneIndexSize);
+		System.out.println("morphIndexSize:"+leR.readUint8());
+		System.out.println("rigidBodyIndexSize:"+leR.readUint8());
+		System.out.println("modelName:"+leR.readText());
+		System.out.println("englishModelName:"+leR.readText());
+		String comment=leR.readText();//comment
+		//System.out.println("comment:"+comment);
+		String enComment=leR.readText();//en comment
+		//System.out.println("englishComment:"+enComment);
+		
+		long vertexCount=leR.readUint32();
+		System.out.println("vertexCount:"+vertexCount);
+		Geometry geo=new Geometry();
+		NMVertex[] vertices=new NMVertex[(int) vertexCount];
+		for(int i=0;i<vertexCount;i++){
+			vertices[i]=new NMVertex();
+			vertices[i].SetPosition(leR.readFloat32(), leR.readFloat32(), leR.readFloat32());
+			vertices[i].SetNormal(leR.readFloat32(), leR.readFloat32(), leR.readFloat32());
+			vertices[i].SetUv(leR.readFloat32(), leR.readFloat32());
+			float[] auvs=new float[additionalUvNum*4];
+			for(int j=0;j<additionalUvNum;j++){
+				auvs[j*4]=leR.readFloat32();
+				auvs[j*4+1]=leR.readFloat32();
+				auvs[j*4+2]=leR.readFloat32();
+				auvs[j*4+3]=leR.readFloat32();
+			}
+			vertices[i].SetAUv(auvs);
+			short type=leR.readUint8();
+			vertices[i].type=type;
+			
+			int[] indices = null;
+			float[] weights = null;
+			switch(type){
+			case 0:
+				indices=new int[]{leR.readUint16()};
+				weights=new float[]{1f};
+				break;
+			case 1:
+				indices=new int[]{leR.readUint16(),leR.readUint16()};
+				weights=new float[]{leR.readFloat32()};
+				break;
+			case 2:
+				indices=new int[]{leR.readUint16(),leR.readUint16(),leR.readUint16(),leR.readUint16()};
+				weights=new float[]{leR.readFloat32(),leR.readFloat32(),leR.readFloat32(),leR.readFloat32()};
+				break;
+			case 3:
+				indices=new int[]{leR.readUint16(),leR.readUint16()};
+				weights=new float[]{leR.readFloat32()};
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();
+				break;
+			}
+			vertices[i].SetSkinIndice(indices);
+			vertices[i].SetSkinWeight(weights);
+			vertices[i].edgeRatio=leR.readFloat32();
+		}
+		geo.Vertices=vertices;
+
+		int faceCount=leR.readUint32();
+		geo.TriangleCount=faceCount/3;
+		int[] triIndices=new int[faceCount];
+		System.out.println("faceCount:"+faceCount);
+		for(int i=0;i<faceCount;i++){
+			triIndices[i]=leR.readUint16();
+		}
+
+		int textureCount=leR.readUint32();
+		System.out.println("textureCount:"+textureCount);
+		for(int i=0;i<textureCount;i++){
+			String texturePath=leR.readText();
+			//System.out.println(texturePath);
+		}
+		int materialCount=leR.readUint32();
+		System.out.println("materialCount:"+materialCount);
+		for(int i=0;i<materialCount;i++){
+			String name=leR.readText();
+			//System.out.println(name);
+			String enName=leR.readText();
+			//System.out.println("EnName:"+enName);
+			//diffuse
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();
+			//specular
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();
+			//shininess
+			leR.readFloat32();
+			//ambient
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();
+			//flag
+			leR.readUint8();
+			//edgecolor
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();
+			//edgesize
+			leR.readFloat32();
+			//textureIndex,envTextureIndex
+			leR.readUint8();leR.readUint8();
+			//envFlag
+			leR.readUint8();
+			//toonFlag
+			short toonFlag=leR.readUint8();
+			if(toonFlag==0){
+				//toonIndex
+				leR.readUint8();
+			}else if(toonFlag==1){
+				leR.readUint8();
+			}
+			//comment
+			leR.readText();
+			//faceCount
+			leR.readUint32();
+		}
+		
+		int boneCount=leR.readUint32();
+		System.out.println("boneCount:"+boneCount);
+		for(int i=0;i<boneCount;i++){
+			String boneName=leR.readText();//name
+			String boneEnName=leR.readText();//enName
+			//System.out.println(boneName+"."+boneEnName);
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//Position
+			leR.readUint16();//parentIndex
+			leR.readUint32();//transformationClass
+			int flag=leR.readUint16();//flag
+			if((flag&0x1)>0){
+				leR.readUint16();//connectIndex
+			}else{
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();//offsetPosition
+			}
+			if((flag&0x100)>0||(flag&0x200)>0){
+				leR.readUint16();//grant.parentIndex
+				leR.readFloat32();//grant.ratio
+			}
+			if((flag&0x400)>0){
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();//fixAxis
+			}
+			if((flag&0x800)>0){
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();//localXVector
+				leR.readFloat32();leR.readFloat32();leR.readFloat32();//localZVector
+			}
+			if((flag&0x2000)>0){
+				leR.readUint32();//key
+			}
+			if((flag&0x20)>0){
+				leR.readUint16();//ik.effector
+				leR.readUint32();//ik.iteration
+				leR.readFloat32();//ik.maxAngle
+				int linkCount=leR.readUint32();//linkCount
+				for(int j=0;j<linkCount;j++){
+					leR.readUint16();//link.index
+					short limit=leR.readUint8();//angleLimitation
+					if(limit==1){
+						leR.readFloat32();leR.readFloat32();leR.readFloat32();//lowerLimitationAngle
+						leR.readFloat32();leR.readFloat32();leR.readFloat32();//upperLimitationAngle
+					}
+				}
+			}
+		}
+		
+		int morphCount=leR.readUint32();
+		System.out.println("morphCount:"+morphCount);
+		for(int i=0;i<morphCount;i++){
+			String Name=leR.readText();//name
+			String EnName=leR.readText();//enName
+			//System.out.println(Name);
+			short panel=leR.readUint8();//panel
+			short type=leR.readUint8();//type
+			int elementCount=leR.readUint32();//elementCount
+			for(int j=0;j<elementCount;j++){
+				switch(type){
+				case 0:
+					leR.readUint8();//index
+					leR.readFloat32();//ratio
+					break;
+				case 1:
+					leR.readUint16();//index
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();//position
+					break;
+				case 2:
+					leR.readUint16();//index
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();//position
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//rotation
+					break;
+				case 3:
+					leR.readUint16();//index
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//uv
+					break;
+				case 8:
+					leR.readUint8();//index
+					leR.readUint8();//type
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//diffuse
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();//specular
+					leR.readFloat32();//shininess
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();//ambient
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//edgecolor
+					leR.readFloat32();//edgeSize
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//textureColor
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//sphereTextureColor
+					leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//toonColor
+					break;
+				}
+			}
+		}
+		
+		int frameCount=leR.readUint32();
+		System.out.println("frameCount:"+frameCount);
+		for(int i=0;i<frameCount;i++){
+			String Name=leR.readText();//name
+			String EnName=leR.readText();//enName
+			//System.out.println(Name);
+			leR.readUint8();//type
+			int elementCount=leR.readUint32();//elementCount
+			for(int j=0;j<elementCount;j++){
+				short target2=leR.readUint8();//target
+				int index=(target2==0) ? leR.readUint16():leR.readUint8();//boneIndex|morphIndex
+			}
+		}
+		
+		int rigidBodyCount=leR.readUint32();
+		System.out.println("rigidBodyCount:"+rigidBodyCount);
+		for(int i=0;i<rigidBodyCount;i++){
+			String Name=leR.readText();//name
+			String EnName=leR.readText();//enName
+			//System.out.println(Name);
+			leR.readUint16();//boneIndex
+			leR.readUint8();//groupIndex
+			leR.readUint16();//groupTarget
+			leR.readUint8();//shapeType
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//width,height,depth
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//position
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//rotation
+			leR.readFloat32();//weight
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();leR.readFloat32();//positionDamping,rotationDamping,restitution,friction
+			leR.readUint8();//type
+		}
+		
+		int constraintCount=leR.readUint32();
+		System.out.println("constraintCount:"+constraintCount);
+		for(int i=0;i<constraintCount;i++){
+			String Name=leR.readText();//name
+			String EnName=leR.readText();//enName
+			//System.out.println(Name);
+			leR.readUint8();//type
+			leR.readUint16();//rigidBodyIndex1
+			leR.readUint16();//rigidBodyIndex2
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//position
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//rotation
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//translationLimitation1
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//translationLimitation2
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//rotationLimitation1
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//rotationLimitation2
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//springPosition
+			leR.readFloat32();leR.readFloat32();leR.readFloat32();//springRotation
+			
+		}
+		dis.close();
+		is.close();
+	}
+
+}
